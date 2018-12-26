@@ -13,7 +13,7 @@ from pprint import pprint
 from dateutil.parser import *
 import datetime
 
-from utils import my_get_post, print_dict
+from .utils import my_get_post, print_dict
 
 
 
@@ -37,7 +37,7 @@ class Dnevnik:
 
         self._ps=self._auth._ps
         ps=self._ps
-#        pdb.set_trace()
+        pdb.set_trace()
         ps.cookies["mos_id"]="CllGxlmW7RAJKzw/DJfJAgA="
 
         milisecs=calendar.timegm(time.gmtime())*1000+random.randint(0,999)+1
