@@ -1,6 +1,7 @@
 #!env python3
 
 import json
+import pdb
 from pprint import pprint
 from urllib.parse import unquote
 from tqdm import tqdm
@@ -18,24 +19,89 @@ class MeshArticle():
         self.html=""
         pass
 
+
+
+def RenderText(j):
+    html=''
+    return html
+
+
+ObjectRenderers={
+        "text" : RenderText,
+#        "image" : RenderImage,
+#        "video" : RenderVideo,
+#        "link" : RenderLink
+        }
+
+""" Отрисовать один объект в ячейке """
+def RenderObject(j):
+    html='<div class="block">'
+
+    if j["atomic"]["content_type"] in ObjectRenderers :
+        html+=ObjectRenderers[j["atomic"]["content_type"]](j)
+    else:
+        html+=f'Не знаю, как отобразить {j["atomic"]["content_type"]}'
+    html+='</div>'
+    return html
+
+""" Отрисовать одну ячейку """
+def RenderCell(j):
+    html='<div class="cell">'
+    for o in enumerate(j["content"]["objects"]):
+        html+=RenderObject(o)+"\n"
+    html+='</div>'
+    return html
+
+""" Отрисовать один ряд """
+def RenderRaw(j):
+    nc=len(j["cells"])
+    html=f'<div class="row row{nc}">\n'
+    for c in enumerate(j["cells"]):
+        html+=RenderCell(c)+"\n"
+    html+='</div>'
+    return html
+
+""" Отрисовать статью """
+def RenderArticle(j):
+    html=""
+    for ridx,row in enumerate(j["layout"]["rows"]):
+        html+='<div class="center-container">'+RenderRaw(row)+"</div>\n"
+    return html
+
+def CalculateArticleWidth(j):
+    w=0
+    for row in enumerate(j["layout"]["rows"]):
+        for cell in enumerate(row["cells"]):
+            cw=int(cell["width"],0)
+            if w<cw : w=cw
+    return w
+
 """ Download composed_material """
-def DownloadCM(js):
+def ConvertComposedMaterial(data, folder):
 
+    material=json.loads(data)
     site="https://uchebnik.mos.ru"
-    content_name = js['name'] if 'iname' in js  else 'UNKNOWN'
-    content_desc = js['description'] if 'description' in js  else 'UNKNOWN'
-    content_author = js['user_name'] if 'user_name' in js else 'UNKNOWN'
-
+    content_name = material['name'] if 'name' in material else 'UNKNOWN'
+    content_desc = material['description'] if 'description' in material  else 'UNKNOWN'
+    content_author = material['author_name'] if 'author_name' in material else 'UNKNOWN'
 
     print(f"Название: {content_name}")
     print(f"Описание: {content_desc}")
 
+    js=json.loads(material['json_content'])
+
     print(f"Разделов: {len(js['articles'])}")
     page=1
 
+    if not os.path.isdir(folder):
+        os.makedirs(folder)
+
+    if not os.path.isdir(folder+"/download"):
+        os.makedirs(folder+"/download")
+
     dlid=1000
 
-    doc=open("output.html", "w")
+    doc=open(folder+"/index.html", "w", encoding="utf-8")
     doc.write("""
 <!DOCTYPE html>
 <html>
@@ -43,6 +109,7 @@ def DownloadCM(js):
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <title>Играемся</title>
         <link rel="stylesheet" href="mykatex.css" >
+        <link rel="stylesheet" href="main.css" >
  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 
     <!-- The loading of KaTeX is deferred to speed up page rendering -->
@@ -55,9 +122,6 @@ def DownloadCM(js):
     </head>
     <body>
     """)
-
-
-    m=hashlib.md5()
 
     TheDocument={}
 
@@ -72,6 +136,8 @@ def DownloadCM(js):
 #        pm.write(f"[ /Title <{TOHEX(str(aidx)+'. '+a['name'])}> /Page {page} /OUT pdfmark\n")
         for ridx, row in enumerate(a['layout']['rows'],start=1):
             for cidx, cell in enumerate(row['cells'],start=1):
+#                if cidx>2: pdb.set_trace()
+
                 for oidx, obj in enumerate(cell['content']['objects'],start=1):
                     atomic_type=obj['atomic']['content_type']
 
@@ -79,7 +145,7 @@ def DownloadCM(js):
                         url=site+obj['atomic']['file']
                         bn=os.path.basename(unquote(url))
                         filename=f"download/{aidx:02}-{ridx:02}-{cidx:02}-{oidx:02}-{bn}"
-                        DownloadFile(url, filename, "file")
+                        DownloadFile(url, folder+"/"+filename, "file")
                         #gs.write(f"\n({filename}) viewJPEG showpage \\")
                         page=page+1
                     elif atomic_type == 'text':
@@ -93,7 +159,7 @@ def DownloadCM(js):
                         ext=url[1:ts][extp:]
                         bn=hashlib.md5(url[1:ts].encode('utf-8')).hexdigest()
                         filename=f"download/{bn}.{ext}"
-                        DownloadFile(url, filename,
+                        DownloadFile(url, folder+"/"+filename,
                                 os.path.basename(unquote(url[1:ts])))
                         dlid+=1
                         w=obj['block']['width']
@@ -108,8 +174,7 @@ def DownloadCM(js):
 #        pprint(objs, depth=2)
 
     # формируем структуру документа
-    nodes=dict(TheDocument)
-    
+    nodes=dict(TheDocument)    
 
     print("формируем структуру документа")
     while nodes:
@@ -154,15 +219,7 @@ def DownloadCM(js):
 
     for a in PreOrderIter(top):
         doc.write(f"<h{a.nestlevel}>{a.article.name}</h{a.nestlevel}>")
-        doc.write(a.article.html)
-
-
-
-
-
-
-
-    
+        doc.write(a.article.html)    
 
 
     doc.write("</body></html>")
@@ -176,11 +233,12 @@ def DownloadFile(url, filename, desc):
     if os.path.isfile(filename):
         print(f"{desc} уже загружен")
         return
-#    print(f"Скачиваем {url} в {filename} [ {desc} ]")
-#    return
     r=requests.get(url,stream=True)
+    pbar=tqdm(r.iter_content(4096), desc=desc, unit="B", unit_scale=1)
     with open(filename,"wb") as f:
-        for data in tqdm(r.iter_content(), desc=desc, unit="byte", unit_scale=1):
+        for data in pbar:
             f.write(data)
+            pbar.update(len(data))
+    pbar.close()
 
 

@@ -53,8 +53,9 @@ class MESHLibrary:
             self._ps.cookies["user_id"]=self.d._userId
             self._ps.cookies["auth_token"]=self.d._auth_token
 
+    
     def DownloadComposedDocument(self,id):
-        ps = self._ps
+        ps = requests.Session()
         ps.cookies["request_method"]="GET"
         headers={"referer"    : f"https://uchebnik.mos.ru/composer2/document/{id}/view", 
             "Accept"     : "application/vnd.cms-v2+json",
@@ -64,9 +65,13 @@ class MESHLibrary:
 
         r=ps.get("https://uchebnik.mos.ru/cms/api/composed_documents/"+id, headers=headers, stream=True)
         sz=int(r.headers.get('content-length', None))
+#        js=r.content
         js=bytes()
-        for data in tqdm(r.iter_content(), unit="byte", unit_scale=1, total=sz):
+        pbar=tqdm(r.iter_content(chunk_size=4096), unit="B", unit_scale=1, total=sz)
+        for data in pbar:
             js+=data
+            pbar.update(len(data))
+        pbar.close()
         return js
 
 

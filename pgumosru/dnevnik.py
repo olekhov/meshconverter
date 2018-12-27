@@ -38,8 +38,6 @@ class Dnevnik:
 
         self._ps=self._auth._ps
         ps=self._ps
-        pdb.set_trace()
-
 
         logging.debug("Вход в ЭЖД")
 
