@@ -10,6 +10,7 @@ requests = "*"
 colorama = "*"
 tqdm = "*"
 python-dateutil = "*"
+logger = "*"
 
 [requires]
 python_version = "3.7"

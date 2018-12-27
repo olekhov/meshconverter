@@ -25,7 +25,7 @@ class MESHLibrary:
         self.d = Dnevnik
         self._ps = requests.Session()
         self._ps.cookies["Ltpatoken2"]=self.d._auth.Ltpatoken2
-        self._ps.cookies["mos_oauth20_token"]=self.d._auth.mostoken
+        self._ps.cookies["mos_oauth20_token"]=self.d._auth.mos_oauth20_token
         self._si=""
 
 
@@ -34,10 +34,11 @@ class MESHLibrary:
         params={ 
             "userId" : self.d._userId, 
             "profileId" : self.d._profileId,
-            "authToken" : self.d._authToken}
+            "authToken" : self.d._auth_token}
         r = my_get_post(ps.get, "https://uchebnik.mos.ru/authenticate", params=params)
-        opts = {"auth_token" : self.d._authToken }
-        headers={"referer"    : f"https://uchebnik.mos.ru/authenticate?userId={self.d._userId}&profileId={self.d._profileId}&authToken={self.d._authToken}", 
+        opts = {"auth_token" : self.d._auth_token }
+        headers={"referer"    :
+                f"https://uchebnik.mos.ru/authenticate?userId={self.d._userId}&profileId={self.d._profileId}&authToken={self.d._auth_token}", 
             "Accept"     : "application/json; charset=UTF-8",
             "profile-id" : self.d._profileId,
             "user-id" : self.d._userId,
@@ -50,7 +51,7 @@ class MESHLibrary:
             logging.info(f"Роль: {self._si['profiles'][0]['type']}")
             self._ps.cookies["profile_id"]=self.d._profileId
             self._ps.cookies["user_id"]=self.d._userId
-            self._ps.cookies["auth_token"]=self.d._authToken
+            self._ps.cookies["auth_token"]=self.d._auth_token
 
     def DownloadComposedDocument(self,id):
         ps = self._ps
@@ -59,7 +60,7 @@ class MESHLibrary:
             "Accept"     : "application/vnd.cms-v2+json",
             "profile-id" : self.d._profileId,
             "user-id" : self.d._userId,
-            "Auth-Token" : self.d._authToken }        
+            "Auth-Token" : self.d._auth_token }        
 
         r=ps.get("https://uchebnik.mos.ru/cms/api/composed_documents/"+id, headers=headers, stream=True)
         sz=int(r.headers.get('content-length', None))

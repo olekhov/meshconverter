@@ -30,7 +30,6 @@ def main():
         print(f"{Style.BRIGHT}{Back.RED}Ошибка!{Style.RESET_ALL}")
         exit()
 
-    pdb.set_trace()
     d=dnevnik.Dnevnik(auth)
     d.Authenticate()
 

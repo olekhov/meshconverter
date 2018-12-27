@@ -7,6 +7,7 @@ import random
 import json
 import re
 import pdb
+import logging
 
 from pprint import pprint
 
@@ -38,73 +39,45 @@ class Dnevnik:
         self._ps=self._auth._ps
         ps=self._ps
         pdb.set_trace()
-        ps.cookies["mos_id"]="CllGxlmW7RAJKzw/DJfJAgA="
 
-        milisecs=calendar.timegm(time.gmtime())*1000+random.randint(0,999)+1
-        r=my_get_post(ps.get, "https://my.mos.ru/static/xdm/index.html?nocache="+str(milisecs)+"&xdm_e=https%3A%2F%2Fwww.mos.ru&xdm_c=default1&xdm_p=1")
-        ps.cookies.update(r.cookies)
-        r=my_get_post(ps.get,r.headers['Location'])
-        ps.cookies.update(r.cookies)
-        r=my_get_post(ps.get,r.headers['Location'])
-        ps.cookies.update(r.cookies)
-        r=my_get_post(ps.get,r.headers['Location'])
-        ps.cookies.update(r.cookies)
-        
-        # system_id: mos.ru
-        r=my_get_post(ps.get,"https://www.mos.ru/api/oauth20/v1/frontend/json/ru/options")
-        opts=json.loads(r.text)
 
-        # надо: nonce signature timestamp
-        #print("token request cookies:")
-        #print_dict(ps.cookies)
-        token_data={
-                "system_id":opts["elk"]["system_id"],
-                "nonce":opts["elk"]["nonce"],
-                "timestamp":opts["elk"]["timestamp"],
-                "signature":opts["elk"]["signature"]}
-        ps.cookies["mos_user_segment"]="default"
-        r=my_get_post(ps.post,self._data_url+"token", data=token_data)
+        logging.debug("Вход в ЭЖД")
 
-        self._mos_ru_token=json.loads(r.text)["token"]
+        cookies={
+                "Ltpatoken2" : self._auth.Ltpatoken2,
+                "mos_id" : "CllGxlwj8H6opE1tpFhhAgA=",
+                "mos_oauth20_token" : self._auth.mos_oauth20_token,
+                "OAUTH20-PHPSESSID" : self._auth.mos_oauth20_token}
 
-        r=my_get_post(ps.get, "https://www.mos.ru/")
-        ps.cookies.update(r.cookies)
-        ps.cookies["mos_user_segment"]="default"
-        r=my_get_post(ps.get,"https://www.mos.ru/pgu/ru/application/dogm/journal/?onsite_from=popular",
-                headers={"referer":"https://www.mos.ru/"})
-        # expect 301 redirect https://www.mos.ru/pgu/ru/application/dogm/journal/?onsite_from=popular
-        ps.cookies.update(r.cookies)        
+        r_journal=ps.get("https://www.mos.ru/pgu/ru/application/dogm/journal/",
+                allow_redirects=False, cookies=cookies,
+                headers={"referer": "https://www.mos.ru/"})
 
-        # obtain PHPSESSID
-        # 302 redirect to https://oauth20.mos.ru/sps/oauth/oauth20/authorize
-        r=my_get_post(ps.get,r.headers['Location'])
-        ps.cookies.update(r.cookies)
-        # 302 redirect to https://www.mos.ru/pgu/ru/oauth/?code=74...       
-        r=my_get_post(ps.get,r.headers['Location'])
-        ps.cookies.update(r.cookies)
-        # 200 redirect to https://www.mos.ru/pgu/ru/services/link/2103/?onsite_from=3532
-        r=my_get_post(ps.get,r.headers['Location'])
-        ps.cookies.update(r.cookies)
+        if r_journal.status_code != 302 :
+            logging.error("Церемония поменялась")
+            return False
 
-        r=my_get_post(ps.get, "https://www.mos.ru/pgu/ru/application/dogm/journal/")
-        
-        self.dnevnik_top_referer = r.headers['Location']
+        r_token=ps.get(r_journal.headers['Location'], allow_redirects=False,
+                cookies=cookies,
+                headers={"referer": "https://www.mos.ru/"})
+        if r_token.status_code !=200 :
+            logging.error("Вход в дневник неудачен")
+            return False
 
-        # 200 redirect to https://www.mos.ru/pgu/ru/services/link/2103/?onsite_from=3532
-        r=my_get_post(ps.get,r.headers['Location'])
+        journal_token=re.search("token=([0-9a-z]*)",r_journal.headers['Location']).group(1)
+        r_sessions=ps.post("https://dnevnik.mos.ru/lms/api/sessions",
+                cookies=cookies, json={"auth_token":journal_token},
+                allow_redirects=False,
+                headers={"referer":r_journal.headers['Location']})
+        if r_sessions.status_code != 200:
+            logging.error("Вход в дневник неудачен")
+            return False
 
-        # Тут мы в https://dnevnik.mos.ru/?token=64749fb9596a7f2078090a894ab31452
-        m=re.search('.*token=(.*)', self.dnevnik_top_referer)
-        self._auth_token=m.group(1)
+        self._auth_token = journal_token
 
-        opts = { "auth_token": self._auth_token }
-        
-        r=my_get_post(ps.post, "https://dnevnik.mos.ru/lms/api/sessions",
-                headers={"referer": self.dnevnik_top_referer}, json=opts)
-
-        self._profile=json.loads(r.text)
-        self._pid=str(self._profile["profiles"][0]["id"])
-        self._ids=str(self._profile["profiles"][0]["user_id"])
+        self._profile=json.loads(r_sessions.text)
+        self._profileId=str(self._profile["profiles"][0]["id"])
+        self._userId=str(self._profile["profiles"][0]["user_id"])
         self.Authenticated = self._auth_token != ""
         return self.Authenticated
 
