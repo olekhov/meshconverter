@@ -22,7 +22,7 @@ class MeshArticle():
 
 
 def RenderText(j):
-    html=''
+    html='<span>'+j['atomic']['displayContent']+'</span>'
     return html
 
 
@@ -108,8 +108,8 @@ def ConvertComposedMaterial(data, folder):
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <title>Играемся</title>
-        <link rel="stylesheet" href="mykatex.css" >
-        <link rel="stylesheet" href="main.css" >
+        <link rel="stylesheet" href="../assets/mykatex.css" >
+        <link rel="stylesheet" href="../assets/main.css" >
  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 
     <!-- The loading of KaTeX is deferred to speed up page rendering -->
@@ -118,7 +118,7 @@ def ConvertComposedMaterial(data, folder):
     <!-- To automatically render math in text elements, include the auto-render extension: -->
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js" integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"
         onload="renderMathInElement(document.body);"></script>
-    <script src="render.js"> </script>
+    <script src="../assets/render.js"> </script>
     </head>
     <body>
     """)
@@ -152,15 +152,17 @@ def ConvertComposedMaterial(data, folder):
                         if 'displayContent' in obj['atomic']:
                             art.html+=obj['atomic']['displayContent']
                     elif atomic_type == 'image':
+#                        pdb.set_trace()
                         url=site+obj['atomic']['file']
                         ts=url.rfind('?')
+                        if ts>0 : url=url[1:ts]
                         #print(f"ts: {ts}")
                         extp=url.rfind(".")
-                        ext=url[1:ts][extp:]
-                        bn=hashlib.md5(url[1:ts].encode('utf-8')).hexdigest()
+                        ext=url[extp:]
+                        bn=hashlib.md5(url.encode('utf-8')).hexdigest()
                         filename=f"download/{bn}.{ext}"
                         DownloadFile(url, folder+"/"+filename,
-                                os.path.basename(unquote(url[1:ts])))
+                                os.path.basename(unquote(url)))
                         dlid+=1
                         w=obj['block']['width']
                         h=obj['block']['height']
@@ -194,6 +196,7 @@ def ConvertComposedMaterial(data, folder):
 
     topart=list(nodes.values())[0]
 
+    pdb.set_trace()
     print(f"Остался только один: {topart.name}")
 
     nodes=dict(TheDocument)
@@ -234,7 +237,8 @@ def DownloadFile(url, filename, desc):
         print(f"{desc} уже загружен")
         return
     r=requests.get(url,stream=True)
-    pbar=tqdm(r.iter_content(4096), desc=desc, unit="B", unit_scale=1)
+    sz=int(r.headers.get('content-length', None))
+    pbar=tqdm(r.iter_content(4096), desc=desc, unit="B", unit_scale=1,total=sz)
     with open(filename,"wb") as f:
         for data in pbar:
             f.write(data)
