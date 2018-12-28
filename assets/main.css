@@ -142,7 +142,7 @@
 
 .icons {
   position: relative;
-  display: inline-block;
+display: inline-block;
   vertical-align: middle; }
 
 .icon-delete {
@@ -6181,7 +6181,7 @@ body {
   padding: 0px 8px; }
 
 .container_main {
-  position: relative;
+/*  position: relative;*/
   height: 100%; }
 
 .padding-none {
@@ -7043,8 +7043,8 @@ lesson-stage
   background: #f3f3f3; }
 
 .center {
-  position: absolute;
-  top: 0;
+/*  position: absolute;
+  top: 0;*/
   left: 48px;
   right: 48px;
   bottom: 0;
@@ -7084,10 +7084,8 @@ lesson-stage
             background: url("/composer2/image/svg-icons/icon-add.svg");
             background-size: cover; }
     .center .center-container .ratio {
-      position: absolute;
       width: 100%;
       left: 0;
-      top: 0;
       border: 1px solid #ccc;
       z-index: 99;
       pointer-events: none;
@@ -7203,7 +7201,7 @@ widget
   margin-bottom: 8px; }
 
 .widget {
-  position: relative;
+/*  position: relative;*/
   border: 1px solid #ddd;
   margin-bottom: 8px; }
   .widget audio {
@@ -7283,7 +7281,7 @@ widget__delete
 widget__move
 */
 .row-wrapper {
-  position: relative; }
+/*  position: relative;*/ }
   .row-wrapper .widget__move {
     position: absolute;
     top: 2px;
@@ -9731,3 +9729,5 @@ MODAL FOLDERS
         background: transparent;
         cursor: pointer;
         opacity: 1; }
+
+

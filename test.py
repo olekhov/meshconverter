@@ -9,7 +9,7 @@ import logging
 from gosuslugi_config import PGUAuthConfig
 from pgumosru import pguauth, libmesh, dnevnik
 
-from meshconverter import ConvertComposedMaterial
+from meshconverter import MeshConverter
 
 class Dmock():
     def __init__(self, auth):
@@ -18,6 +18,12 @@ class Dmock():
         self._userId = ""
         self._auth = auth
         pass
+
+#book_id="10621820" # геометрия волчкевич
+book_id="8675576" # Решение олимпиадных задач по математике
+#book_id="7566847" # История Москвы Москва Будущего
+#book_id="11468362" # математика в кадетских классах
+#book_id="13979552" # черчение
 
 def main():
 
@@ -41,27 +47,24 @@ def main():
 
     lib=libmesh.MESHLibrary(d)
     lib.Open()
-    #book_id="10621820" # геометрия волчкевич
-    book_id="8675576" # Решение олимпиадных задач по математике
-    #book_id="7566847" # История Москвы Москва Будущего
-    #book_id="11468362" # математика в кадетских классах
-    #book_id="13979552" # черчение
     book=lib.DownloadComposedDocument(book_id) 
+
+
     content=json.loads(book)["json_content"]
     with open(book_id+".json", "wb") as f:
         f.write(book)
     with open(book_id+"_content.json", "w", encoding="utf-8") as f:
         f.write(content)
-    ConvertComposedMaterial(book, book_id)
+    mc = MeshConverter(book_id)
+    mc.ConvertComposedMaterial(book)
     exit()
 
 def main2():
     book_id='8675576'
     with open(book_id+'.json', encoding="utf-8") as f:
         book = f.read()
-        ConvertComposedMaterial(book, book_id)
-
-
+    mc = MeshConverter(book_id)
+    mc.ConvertComposedMaterial(book)
 
 if __name__ == "__main__":
     main2()
