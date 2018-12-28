@@ -22,7 +22,11 @@ class MeshArticle():
 
 
 def RenderText(j):
-    html='<span>'+j['atomic']['displayContent']+'</span>'
+
+    if 'displayContent' in j['atomic']:
+        html='<span>'+j['atomic']['displayContent']+'</span>'
+    else:
+        html=''
     return html
 
 
@@ -47,7 +51,7 @@ def RenderObject(j):
 """ Отрисовать одну ячейку """
 def RenderCell(j):
     html='<div class="cell">'
-    for o in enumerate(j["content"]["objects"]):
+    for oidx,o in enumerate(j["content"]["objects"]):
         html+=RenderObject(o)+"\n"
     html+='</div>'
     return html
@@ -56,7 +60,7 @@ def RenderCell(j):
 def RenderRaw(j):
     nc=len(j["cells"])
     html=f'<div class="row row{nc}">\n'
-    for c in enumerate(j["cells"]):
+    for cidx, c in enumerate(j["cells"]):
         html+=RenderCell(c)+"\n"
     html+='</div>'
     return html
@@ -70,7 +74,7 @@ def RenderArticle(j):
 
 def CalculateArticleWidth(j):
     w=0
-    for row in enumerate(j["layout"]["rows"]):
+    for ridx,row in enumerate(j["layout"]["rows"]):
         for cell in enumerate(row["cells"]):
             cw=int(cell["width"],0)
             if w<cw : w=cw
@@ -132,7 +136,9 @@ def ConvertComposedMaterial(data, folder):
         art.parent=a['parentId']
         art.id=a['id']
         TheDocument[art.id]=art
+        art.html=RenderArticle(a)
 
+    if False:
 #        pm.write(f"[ /Title <{TOHEX(str(aidx)+'. '+a['name'])}> /Page {page} /OUT pdfmark\n")
         for ridx, row in enumerate(a['layout']['rows'],start=1):
             for cidx, cell in enumerate(row['cells'],start=1):

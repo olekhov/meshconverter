@@ -42,10 +42,10 @@ def main():
     lib=libmesh.MESHLibrary(d)
     lib.Open()
     #book_id="10621820" # геометрия волчкевич
-    #book_id="8675576" # Решение олимпиадных задач по математике
+    book_id="8675576" # Решение олимпиадных задач по математике
     #book_id="7566847" # История Москвы Москва Будущего
     #book_id="11468362" # математика в кадетских классах
-    book_id="13979552" # черчение
+    #book_id="13979552" # черчение
     book=lib.DownloadComposedDocument(book_id) 
     content=json.loads(book)["json_content"]
     with open(book_id+".json", "wb") as f:
@@ -56,7 +56,7 @@ def main():
     exit()
 
 def main2():
-    book_id='13979552'
+    book_id='8675576'
     with open(book_id+'.json', encoding="utf-8") as f:
         book = f.read()
         ConvertComposedMaterial(book, book_id)
