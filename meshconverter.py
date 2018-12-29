@@ -187,56 +187,26 @@ class MeshConverter():
             #doc.write(f"<h1>{aidx:02}. {a['name']}</h1>")
             art = MeshArticle()
             art.name=a['name']
-            art.parent=a['parentId']
+            art.parent=a['parentId'] if not a['parentId'] is None else 'None'
             art.id=a['id']
             TheDocument[art.id]=art
             art.html=self.RenderArticle(a)
+            art.json=a
 
-        if False:
-#        pm.write(f"[ /Title <{TOHEX(str(aidx)+'. '+a['name'])}> /Page {page} /OUT pdfmark\n")
-            for ridx, row in enumerate(a['layout']['rows'],start=1):
-                for cidx, cell in enumerate(row['cells'],start=1):
-#                if cidx>2: pdb.set_trace()
+        def BuildSubtree(doc,level):
+            subs=[a for key,a in doc.items() if a.parent == level]
+            return subs.sort(key=lambda a: a.json['sortId'] if 'sortId' in a.json else 0)
 
-                    for oidx, obj in enumerate(cell['content']['objects'],start=1):
-                        atomic_type=obj['atomic']['content_type']
-
-                        if atomic_type == 'file':
-                            url=site+obj['atomic']['file']
-                            bn=os.path.basename(unquote(url))
-                            filename=f"download/{aidx:02}-{ridx:02}-{cidx:02}-{oidx:02}-{bn}"
-                            DownloadFile(url, folder+"/"+filename, "file")
-                            #gs.write(f"\n({filename}) viewJPEG showpage \\")
-                            page=page+1
-                        elif atomic_type == 'text':
-                            if 'displayContent' in obj['atomic']:
-                                art.html+=obj['atomic']['displayContent']
-                        elif atomic_type == 'image':
-#                        pdb.set_trace()
-                            url=site+obj['atomic']['file']
-                            ts=url.rfind('?')
-                            if ts>0 : url=url[1:ts]
-                            #print(f"ts: {ts}")
-                            extp=url.rfind(".")
-                            ext=url[extp:]
-                            bn=hashlib.md5(url.encode('utf-8')).hexdigest()
-                            filename=f"download/{bn}.{ext}"
-                            DownloadFile(url, folder+"/"+filename,
-                                    os.path.basename(unquote(url)))
-                            dlid+=1
-                            w=obj['block']['width']
-                            h=obj['block']['height']
-                            art.html+=f"<img src='{filename}' width='{w}' height='{h}'/>"
-                        else:
-                            print(f"UNKNOWN CONTENT TYPE: {atomic_type}")
-
-
-                
-#        print(f": {len(a['layout']['rows'][0]['cells'])}")
-#        pprint(objs, depth=2)
 
         # формируем структуру документа
         nodes=dict(TheDocument)    
+        level='None'
+
+        s=BuildSubtree(TheDocument,level)
+        pdb.set_trace()
+
+        
+        
 
         print("формируем структуру документа")
         while nodes:
