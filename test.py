@@ -20,9 +20,9 @@ class Dmock():
         pass
 
 #book_id="10621820" # геометрия волчкевич
-#book_id="8675576" # Решение олимпиадных задач по математике
+book_id="8675576" # Решение олимпиадных задач по математике
 #book_id="7566847" # История Москвы Москва Будущего
-book_id="11468362" # математика в кадетских классах
+#book_id="11468362" # математика в кадетских классах
 #book_id="13979552" # черчение
 
 def main():
@@ -57,6 +57,7 @@ def main():
         f.write(content)
     mc = MeshConverter(book_id)
     mc.ConvertComposedMaterial(book)
+    print(f"{book_id} закончил")
     exit()
 
 def main2():
@@ -64,6 +65,7 @@ def main2():
         book = f.read()
     mc = MeshConverter(book_id)
     mc.ConvertComposedMaterial(book)
+    print(f"{book_id} закончил")
 
 if __name__ == "__main__":
     main2()
