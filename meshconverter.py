@@ -25,8 +25,13 @@ class MeshConverter():
     def __init__(self,dlfolder):
         self.dlfolder=dlfolder
         self.site="https://uchebnik.mos.ru"
+        self.dlfiles={}
         pass
 
+    def RenderLink(self, j):
+        url=j['atomic']['displayContent']
+        html=f'<a href="{url}">{j["atomic"]["description"]}</a>\n'
+        return html
 
     def RenderImage(self,j):
         #pdb.set_trace()
@@ -36,7 +41,7 @@ class MeshConverter():
         extp=url.rfind(".")
         ext=url[extp+1:]
         bn=hashlib.md5(url.encode('utf-8')).hexdigest()
-        filename=f"download/{bn}.{ext}"
+        filename=f"download/images/{bn}.{ext}"
         self.DownloadFile(url, self.dlfolder+"/"+filename,
             os.path.basename(unquote(url)))
         w=str(j['block']['width'])
@@ -49,9 +54,56 @@ class MeshConverter():
         html=f'<img src="{filename}" style="position:relative;width:auto; height:{h}; max-width:100%; max-height:100%;"/>'
         return html
 
+    def RenderVideo(self,j):
+        #pdb.set_trace()
+        url=self.site+j['atomic']['file']
+        ts=url.rfind('?')
+        if ts>0 : url=url[:ts]
+        extp=url.rfind(".")
+        ext=url[extp+1:]
+        bn=hashlib.md5(url.encode('utf-8')).hexdigest()
+        filename=f"download/video/{bn}.{ext}"
+        self.DownloadFile(url, self.dlfolder+"/"+filename,
+            os.path.basename(unquote(url)))
+        mimetype=""
+        if ext == "mp4": mimetype="video/mp4"
+        elif ext == "ogg": mimetype="video/ogg"
+        else: mimetype="unknown"     
+
+        purl=self.site+j['atomic']['preview']
+        ts=purl.rfind('?')
+        if ts>0 : purl=purl[:ts]
+        extp=purl.rfind(".")
+        ext=purl[extp+1:]
+        bn=hashlib.md5(purl.encode('utf-8')).hexdigest()
+        preview=f"download/preview/{bn}.{ext}"
+        self.DownloadFile(purl, self.dlfolder+"/"+preview,
+            os.path.basename(unquote(purl)))
+
+
+
+        w=str(j['block']['width'])
+        h=str(j['block']['height'])
+
+        if w.isnumeric(): w=w+'px'
+        if h.isnumeric(): h=h+'px'
+        if h=='auto': h='inherit'
+
+
+        html=f'<video controls width="{w}" height="{h}" poster="{preview}">\n'
+        if mimetype!="unknown":
+            html+=f'<source src="{filename}" type="{mimetype}">\n'
+        else:
+            html+=f'Неподдерживаемый формат видео {purl}\n'
+        html+='</video>'
+
+#        html=f'<img src="{preview}" style="position:relative;width:auto; height:{h}; max-width:100%; max-height:100%;"/>'
+        return html
+
+
     def ProcessPars(self,text):
         r=text.replace("<p>","<span>").replace("</p>","</span>")
-        return r
+        return text
 
     def RenderText(self,j):
         if 'displayContent' in j['atomic']:
@@ -74,8 +126,8 @@ class MeshConverter():
     ObjectRenderers={
             "text" : RenderText,
             "image" : RenderImage,
-#        "video" : RenderVideo,
-#        "link" : RenderLink
+        "video" : RenderVideo,
+        "link" : RenderLink
             }
 
 
@@ -156,6 +208,8 @@ class MeshConverter():
 
         if not os.path.isdir(self.dlfolder+"/download"):
             os.makedirs(self.dlfolder+"/download")
+            os.makedirs(self.dlfolder+"/download/images")
+            os.makedirs(self.dlfolder+"/download/video")
 
         dlid=1000
 
@@ -202,7 +256,7 @@ class MeshConverter():
                 toc+=f'<li><p><a href="#{a.id}">{a.name}</a></p>\n'
                 hdr=f'<p id="{a.id}">{a.name} <a href="#toc">Наверх</a></p>\n'
                 html+='<div class="container"><div class="center">'
-                hdr=f'<div class="content-editor b" style="text-align:center""><span>'+hdr+'</span></div>'
+                hdr=f'<div class="content-editor b" style="text-align:center"><span>'+hdr+'</span></div>'
                 hdr=f'<div class="cell" style="text-align:center; width:100%; font-size:24px; font-style:bold">{hdr}</div>'
                 hdr=f'<div class="row-wrapper"><div class="row row1">{hdr}</div></div>\n'
 
@@ -231,22 +285,35 @@ class MeshConverter():
         doc.write("</div>")
         doc.write("</body></html>")
         doc.close()
+
+        f=open(self.dlfolder+"/files.txt","w", encoding="utf-8")
+        for k,v in self.dlfiles.items():
+            f.write(f"{k} {v}\n")
+        f.close()
         pass
 
     def TOHEX(s):
         return 'feff'+s.encode('utf-16be').hex()
 
     def DownloadFile(self,url, filename, desc):
-        if os.path.isfile(filename):
-            print(f"{desc} уже загружен")
-            return
-        r=requests.get(url,stream=True)
+        #pdb.set_trace()
+        self.dlfiles[url]=filename
+        r=requests.head(url)
         sz=int(r.headers.get('content-length', None))
-        pbar=tqdm(r.iter_content(4096), desc=desc, unit="B", unit_scale=1,total=sz)
+        if os.path.isfile(filename):
+            s=os.stat(filename)
+            if s.st_size == sz:
+                print(f"{desc} уже загружен")
+                return
+            else:
+                print(f"{desc} есть, но размер не тот. скачиваем заново")
+        r=requests.get(url,stream=True)
+        pbar=tqdm(r.iter_content(chunk_size=4096), desc=desc, unit="B", unit_scale=1, unit_divisor=4096,total=sz)
         with open(filename,"wb") as f:
             for data in pbar:
                 f.write(data)
                 pbar.update(len(data))
         pbar.close()
+        r.close()
 
 
