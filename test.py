@@ -57,6 +57,7 @@ def main():
         f.write(content)
     mc = MeshConverter(book_id)
     mc.ConvertComposedMaterial(book)
+    print(f"{book_id} закончил")
     exit()
 
 def main2():
@@ -64,6 +65,7 @@ def main2():
         book = f.read()
     mc = MeshConverter(book_id)
     mc.ConvertComposedMaterial(book)
+    print(f"{book_id} закончил")
 
 if __name__ == "__main__":
     main2()

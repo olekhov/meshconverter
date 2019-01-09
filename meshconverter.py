@@ -187,105 +187,47 @@ class MeshConverter():
             #doc.write(f"<h1>{aidx:02}. {a['name']}</h1>")
             art = MeshArticle()
             art.name=a['name']
-            art.parent=a['parentId']
+            art.parent=a['parentId'] if not a['parentId'] is None else 'None'
             art.id=a['id']
             TheDocument[art.id]=art
             art.html=self.RenderArticle(a)
+            art.json=a
 
-        if False:
-#        pm.write(f"[ /Title <{TOHEX(str(aidx)+'. '+a['name'])}> /Page {page} /OUT pdfmark\n")
-            for ridx, row in enumerate(a['layout']['rows'],start=1):
-                for cidx, cell in enumerate(row['cells'],start=1):
-#                if cidx>2: pdb.set_trace()
+        def BuildSubtreeHtml(doc,parent, depth):
+            subs=[a for key,a in doc.items() if a.parent == parent]
+            subs.sort(key=lambda a: a.json['sortId'] if 'sortId' in a.json else 0)
+            html=''
+            toc='<ol>\n'
+            for a in subs:
+                toc+=f'<li><p><a href="#{a.id}">{a.name}</a></p>\n'
+                hdr=f'<p id="{a.id}">{a.name} <a href="#toc">Наверх</a></p>\n'
+                html+='<div class="container"><div class="center">'
+                hdr=f'<div class="content-editor b" style="text-align:center""><span>'+hdr+'</span></div>'
+                hdr=f'<div class="cell" style="text-align:center; width:100%; font-size:24px; font-style:bold">{hdr}</div>'
+                hdr=f'<div class="row-wrapper"><div class="row row1">{hdr}</div></div>\n'
 
-                    for oidx, obj in enumerate(cell['content']['objects'],start=1):
-                        atomic_type=obj['atomic']['content_type']
+                html+='<div class="center-container">'+hdr+"</div>\n"
+                html+='</div></div>'
+                html+=a.html+'\n'
+                h,t=BuildSubtreeHtml(doc, a.id, depth+1)
+                toc+=t+'</li>\n'
+                html+=h
+            toc+='</ol>\n'
+            return html,toc
 
-                        if atomic_type == 'file':
-                            url=site+obj['atomic']['file']
-                            bn=os.path.basename(unquote(url))
-                            filename=f"download/{aidx:02}-{ridx:02}-{cidx:02}-{oidx:02}-{bn}"
-                            DownloadFile(url, folder+"/"+filename, "file")
-                            #gs.write(f"\n({filename}) viewJPEG showpage \\")
-                            page=page+1
-                        elif atomic_type == 'text':
-                            if 'displayContent' in obj['atomic']:
-                                art.html+=obj['atomic']['displayContent']
-                        elif atomic_type == 'image':
-#                        pdb.set_trace()
-                            url=site+obj['atomic']['file']
-                            ts=url.rfind('?')
-                            if ts>0 : url=url[1:ts]
-                            #print(f"ts: {ts}")
-                            extp=url.rfind(".")
-                            ext=url[extp:]
-                            bn=hashlib.md5(url.encode('utf-8')).hexdigest()
-                            filename=f"download/{bn}.{ext}"
-                            DownloadFile(url, folder+"/"+filename,
-                                    os.path.basename(unquote(url)))
-                            dlid+=1
-                            w=obj['block']['width']
-                            h=obj['block']['height']
-                            art.html+=f"<img src='{filename}' width='{w}' height='{h}'/>"
-                        else:
-                            print(f"UNKNOWN CONTENT TYPE: {atomic_type}")
-
-
-                
-#        print(f": {len(a['layout']['rows'][0]['cells'])}")
-#        pprint(objs, depth=2)
 
         # формируем структуру документа
         nodes=dict(TheDocument)    
+        level='None'
 
-        print("формируем структуру документа")
-        while nodes:
-            r=False
-            cn=dict(nodes)
-            for key,val in cn.items():
-                if val.parent in TheDocument:
-                    nodes.pop(key)
-                    r=True
-          #          print(f"Удалили {key}")
-            if not r : 
-         #       print("За этот заход так ничего и не удалили")
-                break
-            else:
-        #        print("Удалили, ещё зайдём")
-                pass
-
-        topart=list(nodes.values())[0]
-
-        pdb.set_trace()
-        print(f"Остался только один: {topart.name}")
-
-        nodes=dict(TheDocument)
-        nodes.pop(topart.id)
-        top = Node(topart.id, article=topart, nestlevel=0)
-
-        # Очередь на поиск
-        artq=queue.Queue()
-        artq.put(top)
-
-        while not artq.empty():
-            print(f"Длина очереди: {artq.qsize()}")
-            a=artq.get(False)
-            for key,value in TheDocument.items():
-                if value.parent==a.article.id:
-                    n = Node(value.id, article=value, parent=a,
-                            nestlevel=a.nestlevel+1)
-                    print(f"Добавили {value.name} в {a.article.name}")
-                    artq.put(n)
-
-        for pre,fill,node in RenderTree(top):
-            print(f"{pre} {node.article.name}")
+#        pdb.set_trace()
+        s,toc=BuildSubtreeHtml(nodes,'None', 1)
 
         doc.write('<div class="main">')
-        for a in PreOrderIter(top):
-            #doc.write(f"<h{a.nestlevel}>{a.article.name}</h{a.nestlevel}>")
-            doc.write(a.article.html)    
-
-
+        doc.write('<p id="toc">Содержание:</p>')
+        doc.write(toc)
+        doc.write('<p>Документ</p>')
+        doc.write(s)
         doc.write("</div>")
         doc.write("</body></html>")
         doc.close()
